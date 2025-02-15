@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Weather App</title>
+    <script src="https://unpkg.com/htmx.org@1.9.4"></script>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Weather App</h1>
+
+        <label for="city">Enter City:</label>
+        <input type="text" id="city" name="city">
+
+        <button
+            hx-get="/weather"
+            hx-trigger="click"
+            hx-target="#weather-result"
+            hx-swap="innerHTML"
+            hx-include="[name='city']">
+            Get Weather
+        </button>
+
+        <div id="weather-result"></div>
+    </div>
+</body>
+</html>
