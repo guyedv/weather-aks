@@ -1,4 +1,7 @@
-fastapi~=0.115.8
+fastapi
 uvicorn
-httpx~=0.28.1
-jinja2~=3.1.5
+python-dotenv
+jinja2
+httpx
+azure-kusto-data
+azure-kusto-ingest

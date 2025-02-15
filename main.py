@@ -60,10 +60,10 @@ async def get_city_coordinates(city: str):
 
         if "results" in geo_data and geo_data["results"]:
             return geo_data["results"][0]["latitude"], geo_data["results"][0]["longitude"], geo_data["results"][0]["name"]
-        return None, None
+        return None, None, None
     except Exception as e:
         print(f"❌ Error getting coordinates: {str(e)}")
-        return None, None
+        return None, None, None
 
 
 def get_weather_stats(data):
@@ -175,7 +175,10 @@ async def get_weather(city: str = Query(..., description="Enter city name")):
 
     try:
         lat, lon, guessed_city = await get_city_coordinates(city)
-        city = guessed_city.lower()
+        if city.lower() != guessed_city.lower():
+            return HTMLResponse("<p>Error: Invalid city name, please try again.")
+
+        city = city.lower()
 
         # Step 1: Check if fresh data exists in ADX
         check_query = f"""
