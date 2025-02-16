@@ -175,8 +175,11 @@ async def get_weather(city: str = Query(..., description="Enter city name")):
 
     try:
         lat, lon, guessed_city = await get_city_coordinates(city)
-        if city.lower() != guessed_city.lower():
+        if guessed_city is None:
             return HTMLResponse("<p>Error: Invalid city name, please try again.")
+
+        elif city.lower() != guessed_city.lower():
+            return HTMLResponse("<p>Error: Inaccurate city name, please try again.")
 
         city = city.lower()
 

@@ -1,0 +1,159 @@
+apiVersion: secrets-store.csi.x-k8s.io/v1
+kind: SecretProviderClass
+metadata:
+  name: azure-kvname
+spec:
+  
+  provider: azure
+  parameters:
+    usePodIdentity: "false"
+    useVMManagedIdentity: "true"
+    userAssignedIdentityID: "012dbd80-4469-4d3d-b0fe-2ea2cf18f100"  # You'll get this after setting up managed identity
+    keyvaultName: "weather-app-vault"  # The name of your Azure Key Vault
+    objects: |
+      array:
+        - |
+          objectName: kusto-query-uri
+          objectType: secret
+        - |
+          objectName: kusto-ingest-uri
+          objectType: secret
+        - |
+          objectName: kusto-db
+          objectType: secret
+        - |
+          objectName: app-id
+          objectType: secret
+        - |
+          objectName: app-key
+          objectType: secret
+        - |
+          objectName: tenant-id
+          objectType: secret
+    tenantId: "579081bd-1a5e-4707-8310-23e5eddb452f"
+  secretObjects:
+    - secretName: weather-app-secrets
+      type: Opaque
+      data:
+        - objectName: kusto-query-uri
+          key: KUSTO_QUERY_URI
+        - objectName: kusto-ingest-uri
+          key: KUSTO_INGEST_URI
+        - objectName: kusto-db
+          key: KUSTO_DB
+        - objectName: app-id
+          key: APP_ID
+        - objectName: app-key
+          key: APP_KEY
+        - objectName: tenant-id
+          key: TENANT_ID
+          
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: weather-app
+  labels:
+    app: weather-app
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: weather-app
+  template:
+    metadata:
+      labels:
+        app: weather-app
+    spec:
+      volumes:
+        - name: secrets-store-inline
+          csi:
+            driver: secrets-store.csi.k8s.io
+            readOnly: true
+            volumeAttributes:
+              secretProviderClass: "azure-kvname"
+      containers:
+        - name: weather-app
+          image: guyweatheracr.azurecr.io/weather-app:v1.2
+          ports:
+            - containerPort: 8000
+          volumeMounts:
+            - name: secrets-store-inline
+              mountPath: "/mnt/secrets-store"
+              readOnly: true
+          env:
+            - name: KUSTO_QUERY_URI
+              valueFrom:
+                secretKeyRef:
+                  name: weather-app-secrets
+                  key: KUSTO_QUERY_URI
+
+            - name: KUSTO_INGEST_URI
+              valueFrom:
+                secretKeyRef:
+                  name: weather-app-secrets
+                  key: KUSTO_INGEST_URI
+
+            - name: KUSTO_DB
+              valueFrom:
+                secretKeyRef:
+                  name: weather-app-secrets
+                  key: KUSTO_DB
+
+            - name: APP_ID
+              valueFrom:
+                secretKeyRef:
+                  name: weather-app-secrets
+                  key: APP_ID
+
+            - name: APP_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: weather-app-secrets
+                  key: APP_KEY
+                  
+            - name: TENANT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: weather-app-secrets
+                  key: TENANT_ID
+
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: weather-app
+spec:
+  ports:
+  - port: 80
+    targetPort: 8000
+  selector:
+    app: weather-app   
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: ingress-weather
+  annotations:
+    kubernetes.io/ingress.class: "nginx"  
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: ""
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: weather-app  
+            port:
+              number: 80
+                                 
