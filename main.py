@@ -24,8 +24,8 @@ WEATHER_API_URL = "https://api.open-meteo.com/v1/forecast"
 GEO_API_URL = "https://geocoding-api.open-meteo.com/v1/search"
 
 # Kusto configuration
-KUSTO_QUERY_URI = "https://weather-cluster.israelcentral.kusto.windows.net"
-KUSTO_INGEST_URI = "https://ingest-weather-cluster.israelcentral.kusto.windows.net"
+KUSTO_QUERY_URI = os.getenv("KUSTO_QUERY_URI")
+KUSTO_INGEST_URI = os.getenv("KUSTO_INGEST_URI")
 KUSTO_DB = os.getenv("KUSTO_DB")
 APP_ID = os.getenv("APP_ID")
 APP_KEY = os.getenv("APP_KEY")

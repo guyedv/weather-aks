@@ -1,0 +1,16 @@
+version: "3.8"
+
+services:
+  myapp:
+    image: weather-app:v1.2
+    environment:
+      - KUSTO_QUERY_URI=${KUSTO_QUERY_URI}
+      - KUSTO_INGEST_URI=${KUSTO_INGEST_URI}
+      - KUSTO_DB=${KUSTO_DB}
+      - APP_ID=${APP_ID}
+      - APP_KEY=${APP_KEY}
+      - TENANT_ID=${TENANT_ID}
+    build: .
+    container_name: weather_container
+    ports:
+      - "8000:8000"
