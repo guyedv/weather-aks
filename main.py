@@ -166,9 +166,11 @@ async def check_data_freshness(city: str) -> tuple[bool, str]:
         return False, ""
 
     latest_date = kusto_latest_date.strftime('%Y-%m-%d')
-    today = datetime.now().strftime('%Y-%m-%d')
+    latest_date_obj = datetime.strptime(latest_date, '%Y-%m-%d').date()
+    today = datetime.now().date()
+    date_difference = abs((today - latest_date_obj).days)
     
-    is_fresh = latest_date == today and data_points >= 30
+    is_fresh = date_difference <= 1 and data_points >= 30
     return is_fresh, latest_date
 
 async def ensure_fresh_data(city: str, lat: float, lon: float) -> bool:
@@ -279,7 +281,8 @@ async def get_weather_stats(city: str):
         AvgWind = avg(wind_speed_10m_max),
         CurrentMaxTemp = toscalar(WeatherData | where tolower(CityName) == '{city}' | top 1 by Date desc | project temperature_2m_max),
         CurrentMinTemp = toscalar(WeatherData | where tolower(CityName) == '{city}' | top 1 by Date desc | project temperature_2m_min),
-        CurrentWind = toscalar(WeatherData | where tolower(CityName) == '{city}' | top 1 by Date desc | project wind_speed_10m_max)
+        CurrentWind = toscalar(WeatherData | where tolower(CityName) == '{city}' | top 1 by Date desc | project wind_speed_10m_max),
+        CurrentWeatherCode = toscalar(WeatherData | where tolower(CityName) == '{city}' | top 1 by Date desc | project weather_code)
     """
     response = query_client.execute(KUSTO_CONFIG['db'], stats_query)
     
@@ -287,6 +290,35 @@ async def get_weather_stats(city: str):
         return None
 
     row = response.primary_results[0][0]
+    weather_codes = {
+        0: "Clear sky",
+        1: "Mainly clear",
+        2: "Partly cloudy",
+        3: "Overcast",
+        45: "Foggy",
+        48: "Depositing rime fog",
+        51: "Light drizzle",
+        53: "Moderate drizzle",
+        55: "Dense drizzle",
+        61: "Slight rain",
+        63: "Moderate rain",
+        65: "Heavy rain",
+        71: "Slight snow fall",
+        73: "Moderate snow fall",
+        75: "Heavy snow fall",
+        77: "Snow grains",
+        80: "Slight rain showers",
+        81: "Moderate rain showers",
+        82: "Violent rain showers",
+        85: "Slight snow showers",
+        86: "Heavy snow showers",
+        95: "Thunderstorm",
+        96: "Thunderstorm with slight hail",
+        99: "Thunderstorm with heavy hail"
+    }
+    weather_code = row['CurrentWeatherCode']
+    weather_description = weather_codes.get(weather_code, "Unknown")
+
     return {
         'min_temp': row['MinTemp'],
         'max_temp': row['MaxTemp'],
@@ -296,7 +328,8 @@ async def get_weather_stats(city: str):
         'avg_wind': round(row['AvgWind'], 1),
         'current_max_temp': row['CurrentMaxTemp'],
         'current_min_temp': row['CurrentMinTemp'],
-        'current_wind': row['CurrentWind']
+        'current_wind': row['CurrentWind'],
+        'weather_description': weather_description
     }
 
 @app.get("/weather", response_class=HTMLResponse)
