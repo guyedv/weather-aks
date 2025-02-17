@@ -1,6 +1,9 @@
 import os
 import io
+import ast
+import re
 from dotenv import load_dotenv, find_dotenv
+from datetime import datetime  
 from fastapi import FastAPI, Query
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
@@ -24,70 +27,41 @@ WEATHER_API_URL = "https://api.open-meteo.com/v1/forecast"
 GEO_API_URL = "https://geocoding-api.open-meteo.com/v1/search"
 
 # Kusto configuration
-KUSTO_QUERY_URI = os.getenv("KUSTO_QUERY_URI")
-KUSTO_INGEST_URI = os.getenv("KUSTO_INGEST_URI")
-KUSTO_DB = os.getenv("KUSTO_DB")
-APP_ID = os.getenv("APP_ID")
-APP_KEY = os.getenv("APP_KEY")
-TENANT_ID = os.getenv("TENANT_ID")
+KUSTO_CONFIG = {
+    'query_uri': os.getenv("KUSTO_QUERY_URI"),
+    'ingest_uri': os.getenv("KUSTO_INGEST_URI"),
+    'db': os.getenv("KUSTO_DB"),
+    'app_id': os.getenv("APP_ID"),
+    'app_key': os.getenv("APP_KEY"),
+    'tenant_id': os.getenv("TENANT_ID")
+}
 
 # Initialize Kusto clients
-try:
-    # Query client
-    query_kcsb = KustoConnectionStringBuilder.with_aad_application_key_authentication(
-        KUSTO_QUERY_URI, APP_ID, APP_KEY, TENANT_ID
-    )
-    query_client = KustoClient(query_kcsb)
-
-    # Ingestion client
-    ingest_kcsb = KustoConnectionStringBuilder.with_aad_application_key_authentication(
-        KUSTO_INGEST_URI, APP_ID, APP_KEY, TENANT_ID
-    )
-    ingest_client = KustoStreamingIngestClient(ingest_kcsb)
-    print("✅ Successfully initialized Kusto clients")
-except Exception as e:
-    print(f"❌ Error initializing Kusto clients: {str(e)}")
-    query_client = None
-    ingest_client = None
-
-
-async def get_city_coordinates(city: str):
-    """Fetch latitude and longitude dynamically."""
+def initialize_kusto_clients():
     try:
-        async with httpx.AsyncClient() as client:
-            response = await client.get(GEO_API_URL, params={"name": city, "count": 1})
-            geo_data = response.json()
+        query_kcsb = KustoConnectionStringBuilder.with_aad_application_key_authentication(
+            KUSTO_CONFIG['query_uri'],
+            KUSTO_CONFIG['app_id'],
+            KUSTO_CONFIG['app_key'],
+            KUSTO_CONFIG['tenant_id']
+        )
+        query_client = KustoClient(query_kcsb)
 
-        if "results" in geo_data and geo_data["results"]:
-            return geo_data["results"][0]["latitude"], geo_data["results"][0]["longitude"], geo_data["results"][0]["name"]
-        return None, None, None
+        ingest_kcsb = KustoConnectionStringBuilder.with_aad_application_key_authentication(
+            KUSTO_CONFIG['ingest_uri'],
+            KUSTO_CONFIG['app_id'],
+            KUSTO_CONFIG['app_key'],
+            KUSTO_CONFIG['tenant_id']
+        )
+        ingest_client = KustoStreamingIngestClient(ingest_kcsb)
+        print("✅ Successfully initialized Kusto clients")
+        return query_client, ingest_client
     except Exception as e:
-        print(f"❌ Error getting coordinates: {str(e)}")
-        return None, None, None
+        print(f"❌ Error initializing Kusto clients: {str(e)}")
+        return None, None
 
-
-def get_weather_stats(data):
-    """Calculate weather statistics from daily data"""
-    try:
-        temps_max = data['temperature_2m_max']
-        temps_min = data['temperature_2m_min']
-        wind_max = data['wind_speed_10m_max']
-        gusts_max = data['wind_gusts_10m_max']
-
-        return {
-            'current_temp': temps_max[-1],
-            'current_wind': wind_max[-1],
-            'min_temp': min(temps_min),
-            'max_temp': max(temps_max),
-            'avg_temp': round(sum(temps_max) / len(temps_max), 1),
-            'min_wind': min(wind_max),
-            'max_wind': max(gusts_max),
-            'avg_wind': round(sum(wind_max) / len(wind_max), 1)
-        }
-    except Exception as e:
-        print(f"❌ Error calculating weather stats: {str(e)}")
-        return None
-
+# Initialize clients at startup
+query_client, ingest_client = initialize_kusto_clients()
 
 @app.get("/", response_class=HTMLResponse)
 async def homepage():
@@ -98,7 +72,23 @@ async def homepage():
         return HTMLResponse(f"<p>Error loading homepage: {str(e)}</p>")
 
 
-async def get_weather_data(city: str, lat: float, lon: float):
+async def get_city_coordinates(city: str):
+    """Fetch latitude and longitude and guess city name dynamically."""
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.get(GEO_API_URL, params={"name": city, "count": 1})
+            geo_data = response.json()
+
+        if "results" in geo_data and geo_data["results"]:
+            result = geo_data["results"][0]
+            return result["latitude"], result["longitude"], result["name"]
+        return None, None, None
+    except Exception as e:
+        print(f"❌ Error getting coordinates: {str(e)}")
+        return None, None, None
+
+
+async def get_weather_data(lat: float, lon: float):
     """Fetch weather data from Open-Meteo API"""
     try:
         async with httpx.AsyncClient() as client:
@@ -106,28 +96,14 @@ async def get_weather_data(city: str, lat: float, lon: float):
                 "latitude": lat,
                 "longitude": lon,
                 "daily": [
-                    "weather_code",
-                    "temperature_2m_max",
-                    "temperature_2m_min",
-                    "apparent_temperature_max",
-                    "apparent_temperature_min",
-                    "sunrise",
-                    "sunset",
-                    "daylight_duration",
-                    "sunshine_duration",
-                    "uv_index_max",
-                    "uv_index_clear_sky_max",
-                    "precipitation_sum",
-                    "rain_sum",
-                    "showers_sum",
-                    "snowfall_sum",
-                    "precipitation_hours",
-                    "precipitation_probability_max",
-                    "wind_speed_10m_max",
-                    "wind_gusts_10m_max",
-                    "wind_direction_10m_dominant",
-                    "shortwave_radiation_sum",
-                    "et0_fao_evapotranspiration"
+                    "weather_code", "temperature_2m_max", "temperature_2m_min",
+                    "apparent_temperature_max", "apparent_temperature_min",
+                    "sunrise", "sunset", "daylight_duration", "sunshine_duration",
+                    "uv_index_max", "uv_index_clear_sky_max", "precipitation_sum",
+                    "rain_sum", "showers_sum", "snowfall_sum", "precipitation_hours",
+                    "precipitation_probability_max", "wind_speed_10m_max",
+                    "wind_gusts_10m_max", "wind_direction_10m_dominant",
+                    "shortwave_radiation_sum", "et0_fao_evapotranspiration"
                 ],
                 "timezone": "auto",
                 "past_days": 30,
@@ -144,7 +120,6 @@ def prepare_ingestion_data(city: str, daily_data: dict):
     try:
         ingestion_data = []
         dates = daily_data["time"]
-
         # Get all keys except 'time' as they represent our weather attributes
         weather_attributes = [key for key in daily_data.keys() if key != "time"]
 
@@ -167,124 +142,191 @@ def prepare_ingestion_data(city: str, daily_data: dict):
         print(f"❌ Error preparing ingestion data: {str(e)}")
         return None, None
 
+async def check_data_freshness(city: str) -> tuple[bool, str]:
+    """
+    Check if we have today's data for the city.
+    Returns (is_fresh, latest_date) tuple.
+    """
+    latest_date_query = f"""
+    WeatherData
+    | where tolower(CityName) == '{city}'
+    | summarize 
+        LatestDate = max(Date),
+        DataPoints = count()
+    """
+    response = query_client.execute(KUSTO_CONFIG['db'], latest_date_query)
+    
+    if not response.primary_results[0]:
+        return False, ""
+        
+    row = response.primary_results[0][0]
+    kusto_latest_date = row['LatestDate'] # e.g. "2025-02-17T00:00:00Z"
+    data_points = row['DataPoints']
+
+    # If no date is found, database does not contain city yet
+    if kusto_latest_date is None:
+        return False, ""
+
+    latest_date = kusto_latest_date.strftime('%Y-%m-%d')
+    today = datetime.now().strftime('%Y-%m-%d')
+    
+    is_fresh = latest_date == today and data_points >= 30
+    return is_fresh, latest_date
+
+async def ensure_fresh_data(city: str, lat: float, lon: float) -> bool:
+    """Ensure we have today's data and full 30-day history"""
+    is_fresh, latest_date = await check_data_freshness(city)
+    
+    if not is_fresh:
+        print(f"🔄 Updating data for {city}. Latest data was from {latest_date}")
+        weather_data = await get_weather_data(lat, lon)
+        if not weather_data or "daily" not in weather_data:
+            return False
+
+        daily_data = weather_data["daily"]
+        
+        if latest_date:
+            try: 
+                existing_dates_query = f"""
+                WeatherData
+                | where tolower(CityName) == '{city.lower()}'
+                | project Date
+                | extend DateStr = format_datetime(Date, 'yyyy-MM-dd')
+                | summarize make_set(DateStr)
+                """
+                response = query_client.execute(KUSTO_CONFIG['db'], existing_dates_query)
+
+                existing_dates = set()
+                if response.primary_results[0]:
+                    # Extract the set of dates from the response
+                    existing_dates = set(response.primary_results[0][0]['set_DateStr'])
+                
+                print(f"Found existing dates in database: {existing_dates}")
+
+                # Create a new filtered daily data dictionary
+                filtered_daily_data = {
+                    key: [] for key in daily_data.keys()
+                }
+
+                # Get the indices of dates we want to keep
+                dates = daily_data["time"]
+                for i in range(len(dates)):
+                    if dates[i] not in existing_dates:
+                        # For each key in daily_data, append the value at index i
+                        for key in daily_data.keys():
+                            filtered_daily_data[key].append(daily_data[key][i])
+
+                print(f"Filtered out {len(dates) - len(filtered_daily_data['time'])} duplicate dates")
+                
+                # Only proceed with ingestion if we have new data
+                if not filtered_daily_data['time']:
+                    print("✅ No new dates to ingest")
+                    return True
+                
+                daily_data = filtered_daily_data
+
+            except Exception as e:
+                print(f"❌ Error while fetching existing data: {str(e)}")
+                return False
+
+        ingestion_data, _ = prepare_ingestion_data(city, daily_data)
+        if not ingestion_data:
+            return False
+
+        try:
+            ingestion_props = IngestionProperties(
+                database=KUSTO_CONFIG['db'],
+                table="WeatherData",
+                data_format=DataFormat.CSV,
+                ingestion_mapping_kind=IngestionMappingKind.CSV,
+                ingestion_mapping_reference="WeatherDataMapping"
+            )
+
+            csv_data = "\n".join(ingestion_data)
+            csv_stream = io.StringIO(csv_data)
+
+            print("🔹 Ingesting fresh data into ADX...")
+            ingest_client.ingest_from_stream(
+                csv_stream,
+                ingestion_properties=ingestion_props
+            )
+            print("✅ Data Ingestion Successful!")
+            
+            # Verify the new data was stored
+            is_fresh, new_latest_date = await check_data_freshness(city)
+            if not is_fresh:
+                print(f"❌ Data verification failed. Latest date after update: {new_latest_date}")
+                return False
+                
+            return True
+
+        except Exception as e:
+            print(f"❌ Error during data ingestion: {str(e)}")
+            return False
+    
+    print(f"✅ Data is fresh for {city}. Latest date: {latest_date}")
+    return True
+async def get_weather_stats(city: str):
+    """Get weather statistics from the database"""
+    stats_query = f"""
+    WeatherData
+    | where tolower(CityName) == '{city}'
+    | where Date >= ago(30d)
+    | summarize 
+        MinTemp = min(temperature_2m_min), 
+        MaxTemp = max(temperature_2m_max), 
+        AvgTemp = avg((temperature_2m_max+temperature_2m_min)/2),
+        MinWind = min(wind_speed_10m_max), 
+        MaxWind = max(wind_speed_10m_max), 
+        AvgWind = avg(wind_speed_10m_max),
+        CurrentMaxTemp = toscalar(WeatherData | where tolower(CityName) == '{city}' | top 1 by Date desc | project temperature_2m_max),
+        CurrentMinTemp = toscalar(WeatherData | where tolower(CityName) == '{city}' | top 1 by Date desc | project temperature_2m_min),
+        CurrentWind = toscalar(WeatherData | where tolower(CityName) == '{city}' | top 1 by Date desc | project wind_speed_10m_max)
+    """
+    response = query_client.execute(KUSTO_CONFIG['db'], stats_query)
+    
+    if not response.primary_results[0]:
+        return None
+
+    row = response.primary_results[0][0]
+    return {
+        'min_temp': row['MinTemp'],
+        'max_temp': row['MaxTemp'],
+        'avg_temp': round(row['AvgTemp'], 1),
+        'min_wind': row['MinWind'],
+        'max_wind': row['MaxWind'],
+        'avg_wind': round(row['AvgWind'], 1),
+        'current_max_temp': row['CurrentMaxTemp'],
+        'current_min_temp': row['CurrentMinTemp'],
+        'current_wind': row['CurrentWind']
+    }
 
 @app.get("/weather", response_class=HTMLResponse)
 async def get_weather(city: str = Query(..., description="Enter city name")):
+    """Handle weather requests"""
     if not query_client or not ingest_client:
         return HTMLResponse("<p>Error: Kusto clients not properly initialized</p>")
 
     try:
+        # Get city coordinates
         lat, lon, guessed_city = await get_city_coordinates(city)
         if guessed_city is None:
-            return HTMLResponse("<p>Error: Invalid city name, please try again.")
-
+            return HTMLResponse("<p>Error: Invalid city name, please try again.</p>")
         elif city.lower() != guessed_city.lower():
-            return HTMLResponse("<p>Error: Inaccurate city name, please try again.")
+            return HTMLResponse("<p>Error: Inaccurate city name, please try again.</p>")
 
         city = city.lower()
 
-        # Step 1: Check if fresh data exists in ADX
-        check_query = f"""
-        WeatherData
-        | where tolower(CityName) == '{city}'
-        | where Date >= ago(30d)
-        | summarize RecordCount = count()
-        """
-        response = query_client.execute(KUSTO_DB, check_query)
-        result_count = response.primary_results[0][0]['RecordCount'] if response.primary_results[0] else 0
+        # Ensure we have fresh data
+        if not await ensure_fresh_data(city, lat, lon):
+            return HTMLResponse("<p>Error: Could not ensure fresh weather data.</p>")
 
-        # If we don't have 30 days of data, fetch and store new data
-        if result_count < 30:
-            # Fetch new data
-
-            if lat is None or lon is None:
-                return HTMLResponse("<p>Could not find coordinates for this city.</p>")
-
-            weather_data = await get_weather_data(city, lat, lon)
-            if not weather_data or "daily" not in weather_data:
-                return HTMLResponse("<p>Error: Invalid response from weather API.</p>")
-
-            daily_data = weather_data["daily"]
-            ingestion_data, weather_attributes = prepare_ingestion_data(city, daily_data)
-
-            if not ingestion_data:
-                return HTMLResponse("<p>Error: Could not prepare weather data for storage.</p>")
-
-            try:
-                # Store data in ADX
-                ingestion_props = IngestionProperties(
-                    database=KUSTO_DB,
-                    table="WeatherData",
-                    data_format=DataFormat.CSV,
-                    ingestion_mapping_kind=IngestionMappingKind.CSV,
-                    ingestion_mapping_reference="WeatherDataMapping"
-                )
-
-                csv_data = "\n".join(ingestion_data)
-                csv_stream = io.StringIO(csv_data)
-
-                print("🔹 Ingesting Data into ADX...")
-                ingest_client.ingest_from_stream(csv_stream, ingestion_properties=ingestion_props)
-                print("✅ Data Ingestion Successful!")
-
-                # Add a delay to allow for ingestion
-                await asyncio.sleep(3)  # Wait for 10 seconds for data to be available
-
-                # Verify data was stored
-                verify_query = f"""
-                WeatherData
-                | where tolower(CityName) == '{city}'
-                | where Date >= ago(30d)
-                | summarize RecordCount = count()
-                """
-                verify_response = query_client.execute(KUSTO_DB, verify_query)
-                verify_count = verify_response.primary_results[0][0]['RecordCount'] if verify_response.primary_results[
-                    0] else 0
-
-                if verify_count < 30:
-                    return HTMLResponse(
-                        "<p>Error: Data storage verification failed. Please try again in a few minutes.</p>")
-
-            except Exception as e:
-                print(f"❌ Error during data ingestion: {str(e)}")
-                return HTMLResponse(f"<p>Error storing weather data: {str(e)}</p>")
-
-        # At this point, we should have data in the database
-        # Query the stored data to display
-        stats_query = f"""
-        WeatherData
-        | where tolower(CityName) == '{city}'
-        | where Date >= ago(30d)
-        | summarize 
-            MinTemp = min(temperature_2m_min), 
-            MaxTemp = max(temperature_2m_max), 
-            AvgTemp = avg((temperature_2m_max+temperature_2m_min)/2),
-            MinWind = min(wind_speed_10m_max), 
-            MaxWind = max(wind_speed_10m_max), 
-            AvgWind = avg(wind_speed_10m_max),
-            CurrentMaxTemp = toscalar(WeatherData | where tolower(CityName) == '{city}' | top 1 by Date desc | project temperature_2m_max),
-            CurrentMinTemp = toscalar(WeatherData | where tolower(CityName) == '{city}' | top 1 by Date desc | project temperature_2m_min),
-            CurrentWind = toscalar(WeatherData | where tolower(CityName) == '{city}' | top 1 by Date desc | project wind_speed_10m_max)
-
-        """
-        stats_response = query_client.execute(KUSTO_DB, stats_query)
-
-        if not stats_response.primary_results[0]:
+        # Get weather statistics
+        stats = await get_weather_stats(city)
+        if not stats:
             return HTMLResponse("<p>Error: Could not retrieve weather data from database.</p>")
 
-        row = stats_response.primary_results[0][0]
-        stats = {
-            'min_temp': row['MinTemp'],
-            'max_temp': row['MaxTemp'],
-            'avg_temp': round(row['AvgTemp'], 1),
-            'min_wind': row['MinWind'],
-            'max_wind': row['MaxWind'],
-            'avg_wind': round(row['AvgWind'], 1),
-            'current_max_temp': row['CurrentMaxTemp'],
-            'current_min_temp': row['CurrentMinTemp'],
-            'current_wind': row['CurrentWind']
-        }
-
+        # Render template with data
         return env.get_template("weather.html").render(
             city=city.capitalize(),
             **stats
