@@ -316,8 +316,37 @@ async def get_weather_stats(city: str):
         96: "Thunderstorm with slight hail",
         99: "Thunderstorm with heavy hail"
     }
+    icon_map = {
+        0: "01d",
+        1: "01d",
+        2: "02d",
+        3: "03d",
+        45: "03d",
+        48: "03d",
+        51: "09d",
+        53: "09d",
+        55: "09d",
+        61: "09d",
+        63: "09d",
+        65: "09d",
+        71: "13d",
+        73: "13d",
+        75: "13d",
+        77: "13d",
+        80: "09d",
+        81: "09d",
+        82: "09d",
+        85: "13d",
+        86: "13d",
+        95: "11d",
+        96: "11d",
+        99: "11d"
+     }
     weather_code = row['CurrentWeatherCode']
     weather_description = weather_codes.get(weather_code, "Unknown")
+    icon_code = icon_map.get(weather_code, "01d")
+    weather_icon_url = f"https://openweathermap.org/img/wn/{icon_code}@2x.png"
+    print(weather_icon_url)
 
     return {
         'min_temp': row['MinTemp'],
@@ -329,7 +358,8 @@ async def get_weather_stats(city: str):
         'current_max_temp': row['CurrentMaxTemp'],
         'current_min_temp': row['CurrentMinTemp'],
         'current_wind': row['CurrentWind'],
-        'weather_description': weather_description
+        'weather_description': weather_description,
+        'weather_icon_url': weather_icon_url
     }
 
 @app.get("/weather", response_class=HTMLResponse)

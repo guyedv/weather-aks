@@ -1,17 +1,21 @@
 <div id="weather-container">
     <h2>Weather in {{ city }}</h2>
-
+    
     <h3>Current Weather</h3>
-    <p><strong>Weather Description:</strong> {{ weather_description }}</p>
+    <div class="weather-icon-container">
+        <img src="{{ weather_icon_url }}" alt="{{ weather_description }}">
+    </div>
+    <p class="weather-description"><strong>{{ weather_description }}</strong></p>
+    
     <p><strong>Min Temperature:</strong> {{ current_min_temp }}°C</p>
     <p><strong>Max Temperature:</strong> {{ current_max_temp }}°C</p>
     <p><strong>Wind Speed:</strong> {{ current_wind }} km/h</p>
-
+    
     <h3>Historical Data (Last 30 Days)</h3>
     <p><strong>Min Temperature:</strong> {{ min_temp }}°C</p>
     <p><strong>Max Temperature:</strong> {{ max_temp }}°C</p>
     <p><strong>Avg Temperature:</strong> {{ avg_temp }}°C</p>
-
+    
     <p><strong>Min Wind Speed:</strong> {{ min_wind }} km/h</p>
     <p><strong>Max Wind Speed:</strong> {{ max_wind }} km/h</p>
     <p><strong>Avg Wind Speed:</strong> {{ avg_wind }} km/h</p>

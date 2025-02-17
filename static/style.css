@@ -1,7 +1,6 @@
-/* General Styles */
 body {
     font-family: Arial, sans-serif;
-    background-color: #f4f4f4;
+    background-color: #694343;
     margin: 0;
     padding: 0;
     display: flex;
@@ -14,7 +13,7 @@ body {
 .container {
     width: 90%;
     max-width: 500px;
-    background: white;
+    background: rgb(153 182 217);
     padding: 20px;
     border-radius: 10px;
     box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.2);
@@ -54,16 +53,39 @@ button:hover {
     margin-top: 20px;
     padding: 15px;
     border-radius: 8px;
-    background: #e3f2fd;
+    background: #ab9898;  /* Darker background */
+    color: white;         /* White text for better contrast */
     box-shadow: 0px 2px 5px rgba(0, 0, 0, 0.2);
 }
 
+/* Weather Icon Container */
+.weather-icon-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin: 20px 0;
+}
+
+.weather-icon-container img {
+    width: 100px;  /* Larger icon */
+    height: 100px;
+    object-fit: contain;
+}
+
 h2, h3 {
-    color: #333;
+    color: #694343;  /* White headers for contrast */
+    margin-bottom: 15px;
 }
 
 p {
     font-size: 16px;
-    color: #444;
-    margin: 5px 0;
+    color: #050508;  /* Light gray text for better readability */
+    margin: 10px 0;
+}
+
+/* Weather description text alignment */
+.weather-description {
+    text-align: center;
+    margin-top: 10px;
+    color: #061316;
 }

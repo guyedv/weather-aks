@@ -74,7 +74,7 @@ spec:
               secretProviderClass: "azure-kvname"
       containers:
         - name: weather-app
-          image: guyweatheracr.azurecr.io/weather-app:v1.2
+          image: guyweatheracr.azurecr.io/weather-app:v1.3
           ports:
             - containerPort: 8000
           volumeMounts:
