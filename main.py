@@ -1,7 +1,5 @@
 import os
 import io
-import ast
-import re
 from dotenv import load_dotenv, find_dotenv
 from datetime import datetime  
 from fastapi import FastAPI, Query
