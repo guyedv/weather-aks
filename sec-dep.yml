@@ -8,8 +8,8 @@ spec:
   parameters:
     usePodIdentity: "false"
     useVMManagedIdentity: "true"
-    userAssignedIdentityID: c279fc0d-1c7f-4e39-8a50-a9072abbab94
-    keyvaultName: guyedv2-vault
+    userAssignedIdentityID: 012dbd80-4469-4d3d-b0fe-2ea2cf18f100
+    keyvaultName: weather-app-vault
     objects: |
       array:
         - |
@@ -74,7 +74,7 @@ spec:
               secretProviderClass: "azure-kvname"
       containers:
         - name: weather-app
-          image: guyweatheracr.azurecr.io/weather-app:v1.6
+          image: guyweatheracr.azurecr.io/weather-app:v1.7
           ports:
             - containerPort: 8000
           volumeMounts:

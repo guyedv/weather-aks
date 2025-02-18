@@ -91,6 +91,19 @@ az keyvault create \
   --resource-group <resource-group-name> \
   --location <location>
 ```
+# Get the AKS managed identity ID
+IDENTITY_ID=$(az aks show --name weather-app-cluster --resource-group weather-project --query identityProfile.kubeletidentity.clientId -o tsv)
+
+# Grant Key Vault permissions to AKS
+az keyvault set-policy --name weather-app-vault --resource-group weather-project --spn 012dbd80-4469-4d3d-b0fe-2ea2cf18f100 --secret-permissions get list
+# Store your secrets
+az keyvault secret set --vault-name $VAULT_NAME --name "kusto-query-uri" --value "https://${CLUSTER_NAME}.${REGION}.kusto.windows.net"
+az keyvault secret set --vault-name $VAULT_NAME --name "kusto-ingest-uri" --value "https://ingest-${CLUSTER_NAME}.${REGION}.kusto.windows.net"
+az keyvault secret set --vault-name $VAULT_NAME --name "kusto-db" --value "$DB_NAME"
+az keyvault secret set --vault-name $VAULT_NAME --name "app-id" --value "$APP_ID"
+az keyvault secret set --vault-name $VAULT_NAME --name "app-key" --value "$APP_KEY"
+az keyvault secret set --vault-name $VAULT_NAME --name "tenant-id" --value "$TENANT_ID"
+
 
 ### 8. Helm Setup and Required Charts
 
