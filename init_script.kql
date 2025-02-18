@@ -53,4 +53,4 @@
     {"Column":"et0_fao_evapotranspiration", "DataType":"real", "Ordinal":"23"}
 ]'
 
-.alter database weatherdb policy streamingingestion enable
+.alter database weatherdb policy streamingingestion enable # ***Configure ADX Cluster to enable streaming ingestion
