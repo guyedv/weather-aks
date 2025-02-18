@@ -1,0 +1,56 @@
+.create table WeatherData (
+    CityName: string, 
+    Date: datetime,
+    weather_code: int,
+    temperature_2m_max: real,
+    temperature_2m_min: real,
+    apparent_temperature_max: real,
+    apparent_temperature_min: real,
+    sunrise: datetime,
+    sunset: datetime,
+    daylight_duration: real,
+    sunshine_duration: real,
+    uv_index_max: real,
+    uv_index_clear_sky_max: real,
+    precipitation_sum: real,
+    rain_sum: real,
+    showers_sum: real,
+    snowfall_sum: real,
+    precipitation_hours: real,
+    precipitation_probability_max: int,
+    wind_speed_10m_max: real,
+    wind_gusts_10m_max: real,
+    wind_direction_10m_dominant: int,
+    shortwave_radiation_sum: real,
+    et0_fao_evapotranspiration: real
+)
+
+.create table WeatherData ingestion csv mapping 'WeatherDataMapping'
+'[
+    {"Column":"CityName", "DataType":"string", "Ordinal":"0"},
+    {"Column":"Date", "DataType":"datetime", "Ordinal":"1"},
+    {"Column":"weather_code", "DataType":"int", "Ordinal":"2"},
+    {"Column":"temperature_2m_max", "DataType":"real", "Ordinal":"3"},
+    {"Column":"temperature_2m_min", "DataType":"real", "Ordinal":"4"},
+    {"Column":"apparent_temperature_max", "DataType":"real", "Ordinal":"5"},
+    {"Column":"apparent_temperature_min", "DataType":"real", "Ordinal":"6"},
+    {"Column":"sunrise", "DataType":"datetime", "Ordinal":"7"},
+    {"Column":"sunset", "DataType":"datetime", "Ordinal":"8"},
+    {"Column":"daylight_duration", "DataType":"real", "Ordinal":"9"},
+    {"Column":"sunshine_duration", "DataType":"real", "Ordinal":"10"},
+    {"Column":"uv_index_max", "DataType":"real", "Ordinal":"11"},
+    {"Column":"uv_index_clear_sky_max", "DataType":"real", "Ordinal":"12"},
+    {"Column":"precipitation_sum", "DataType":"real", "Ordinal":"13"},
+    {"Column":"rain_sum", "DataType":"real", "Ordinal":"14"},
+    {"Column":"showers_sum", "DataType":"real", "Ordinal":"15"},
+    {"Column":"snowfall_sum", "DataType":"real", "Ordinal":"16"},
+    {"Column":"precipitation_hours", "DataType":"real", "Ordinal":"17"},
+    {"Column":"precipitation_probability_max", "DataType":"int", "Ordinal":"18"},
+    {"Column":"wind_speed_10m_max", "DataType":"real", "Ordinal":"19"},
+    {"Column":"wind_gusts_10m_max", "DataType":"real", "Ordinal":"20"},
+    {"Column":"wind_direction_10m_dominant", "DataType":"int", "Ordinal":"21"},
+    {"Column":"shortwave_radiation_sum", "DataType":"real", "Ordinal":"22"},
+    {"Column":"et0_fao_evapotranspiration", "DataType":"real", "Ordinal":"23"}
+]'
+
+.alter database weatherdb policy streamingingestion enable

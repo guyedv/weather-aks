@@ -8,8 +8,8 @@ spec:
   parameters:
     usePodIdentity: "false"
     useVMManagedIdentity: "true"
-    userAssignedIdentityID: "012dbd80-4469-4d3d-b0fe-2ea2cf18f100"  # You'll get this after setting up managed identity
-    keyvaultName: "weather-app-vault"  # The name of your Azure Key Vault
+    userAssignedIdentityID: c279fc0d-1c7f-4e39-8a50-a9072abbab94
+    keyvaultName: guyedv2-vault
     objects: |
       array:
         - |
@@ -30,7 +30,7 @@ spec:
         - |
           objectName: tenant-id
           objectType: secret
-    tenantId: "579081bd-1a5e-4707-8310-23e5eddb452f"
+    tenantId: 579081bd-1a5e-4707-8310-23e5eddb452f
   secretObjects:
     - secretName: weather-app-secrets
       type: Opaque
@@ -74,7 +74,7 @@ spec:
               secretProviderClass: "azure-kvname"
       containers:
         - name: weather-app
-          image: guyweatheracr.azurecr.io/weather-app:v1.3
+          image: guyweatheracr.azurecr.io/weather-app:v1.6
           ports:
             - containerPort: 8000
           volumeMounts:
