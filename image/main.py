@@ -1,5 +1,6 @@
 import os
 import io
+import pytz
 from dotenv import load_dotenv, find_dotenv
 from datetime import datetime  
 from fastapi import FastAPI, Query
@@ -140,7 +141,7 @@ def prepare_ingestion_data(city: str, daily_data: dict):
         print(f"❌ Error preparing ingestion data: {str(e)}")
         return None, None
 
-async def check_data_freshness(city: str) -> tuple[bool, str]:
+async def check_data_freshness(city: str, weather_data: dict) -> tuple[bool, str]:
     """
     Check if we have today's data for the city.
     Returns (is_fresh, latest_date) tuple.
@@ -165,21 +166,28 @@ async def check_data_freshness(city: str) -> tuple[bool, str]:
     if kusto_latest_date is None:
         return False, ""
 
+    timezone = weather_data.get('timezone')
+    now_utc = datetime.now(pytz.UTC)
+    local_time = now_utc.astimezone(pytz.timezone(timezone))
+    local_date = local_time.strftime("%Y-%m-%d")
+    local_date_obj = datetime.strptime(local_date, '%Y-%m-%d').date()
+    
     latest_date = kusto_latest_date.strftime('%Y-%m-%d')
     latest_date_obj = datetime.strptime(latest_date, '%Y-%m-%d').date()
-    today = datetime.now().date()
-    date_difference = abs((today - latest_date_obj).days)
     
-    is_fresh = date_difference <= 1 and data_points >= 30
+    date_difference = abs((local_date_obj - latest_date_obj).days)
+    
+    is_fresh = date_difference == 0 and data_points >= 30
     return is_fresh, latest_date
 
 async def ensure_fresh_data(city: str, lat: float, lon: float) -> bool:
     """Ensure we have today's data and full 30-day history"""
-    is_fresh, latest_date = await check_data_freshness(city)
+    weather_data = await get_weather_data(lat, lon)
+    is_fresh, latest_date = await check_data_freshness(city,weather_data)
     
     if not is_fresh:
         print(f"🔄 Updating data for {city}. Latest data was from {latest_date}")
-        weather_data = await get_weather_data(lat, lon)
+        
         if not weather_data or "daily" not in weather_data:
             return False
 
@@ -253,7 +261,7 @@ async def ensure_fresh_data(city: str, lat: float, lon: float) -> bool:
             print("✅ Data Ingestion Successful!")
             
             # Verify the new data was stored
-            is_fresh, new_latest_date = await check_data_freshness(city)
+            is_fresh, new_latest_date = await check_data_freshness(city, weather_data)
             if not is_fresh:
                 print(f"❌ Data verification failed. Latest date after update: {new_latest_date}")
                 return False
