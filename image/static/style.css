@@ -1,6 +1,6 @@
 body {
     font-family: Arial, sans-serif;
-    background-color: #694343;
+    background-color: #FF6B6B;
     margin: 0;
     padding: 0;
     display: flex;
@@ -13,7 +13,7 @@ body {
 .container {
     width: 90%;
     max-width: 500px;
-    background: rgb(153 182 217);
+    background: #39CCCC;
     padding: 20px;
     border-radius: 10px;
     box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.2);
@@ -35,7 +35,7 @@ button {
     padding: 10px;
     width: 85%;
     border: none;
-    background-color: #007BFF;
+    background-color: #FF6B6B;
     color: white;
     font-size: 16px;
     cursor: pointer;
@@ -45,7 +45,7 @@ button {
 }
 
 button:hover {
-    background-color: #0056b3;
+    background-color: #001F3F;
 }
 
 /* Weather Result Box */
@@ -53,7 +53,7 @@ button:hover {
     margin-top: 20px;
     padding: 15px;
     border-radius: 8px;
-    background: #ab9898;  /* Darker background */
+    background: #001F3F;  /* Darker background */
     color: white;         /* White text for better contrast */
     box-shadow: 0px 2px 5px rgba(0, 0, 0, 0.2);
 }
@@ -73,19 +73,20 @@ button:hover {
 }
 
 h2, h3 {
-    color: #694343;  /* White headers for contrast */
+    color: #FF6B6B;  /* White headers for contrast */
     margin-bottom: 15px;
 }
 
 p {
     font-size: 16px;
-    color: #050508;  /* Light gray text for better readability */
+    color: #F0F0F0;  /* Light gray text for better readability */
     margin: 10px 0;
 }
 
 /* Weather description text alignment */
 .weather-description {
     text-align: center;
-    margin-top: 10px;
-    color: #061316;
+    margin-top: 1px;
+    color: #F0F0F0;
+    font-size: 20px;
 }

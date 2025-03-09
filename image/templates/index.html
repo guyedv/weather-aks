@@ -5,25 +5,36 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Weather App</title>
     <script src="https://unpkg.com/htmx.org@1.9.4"></script>
-    <link rel="stylesheet" href="/static/style.css">
+    <link rel="stylesheet" href="../static/style.css">
 </head>
 <body>
     <div class="container">
         <h1>Weather App</h1>
 
-        <label for="city">Enter City:</label>
+        <label for="city"><strong>Enter City:</strong></label>
         <input type="text" id="city" name="city">
 
         <button
+            id="weather-button"
             hx-get="/weather"
             hx-trigger="click"
             hx-target="#weather-result"
             hx-swap="innerHTML"
-            hx-include="[name='city']">
+            hx-include="[name='city']"><strong>
             Get Weather
+        </strong>
         </button>
 
         <div id="weather-result"></div>
     </div>
+    <script>
+        // Add event listener for the Enter key
+        document.getElementById('city').addEventListener('keyup', function(event) {
+            if (event.key === 'Enter') {
+                // Trigger the button's hx-get
+                document.getElementById('weather-button').click();
+            }
+        });
+    </script>
 </body>
 </html>

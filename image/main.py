@@ -346,7 +346,6 @@ async def get_weather_stats(city: str):
     weather_description = weather_codes.get(weather_code, "Unknown")
     icon_code = icon_map.get(weather_code, "01d")
     weather_icon_url = f"https://openweathermap.org/img/wn/{icon_code}@2x.png"
-    print(weather_icon_url)
 
     return {
         'min_temp': row['MinTemp'],
@@ -374,7 +373,7 @@ async def get_weather(city: str = Query(..., description="Enter city name")):
         if guessed_city is None:
             return HTMLResponse("<p>Error: Invalid city name, please try again.</p>")
         elif city.lower() != guessed_city.lower():
-            return HTMLResponse("<p>Error: Inaccurate city name, please try again.</p>")
+            return HTMLResponse(f"<p>Error: Inaccurate city name, Did you mean {guessed_city}? </p>")
 
         city = city.lower()
 
